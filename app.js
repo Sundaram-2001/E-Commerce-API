@@ -17,7 +17,13 @@ const mongoose=require("mongoose");
 mongoose.connect('mongodb://127.0.0.1/ecomDB')
 
 
+
+// mongoose.set("strictQuery", 'true');
+
+
 app.use(morgan('dev'));
+
+app.use('/uploads',express.static('uploads'));
 app.use(bodyParser.urlencoded({extended:false}))
 app.use(bodyParser.json());
 app.use('/products',productRoutes);
