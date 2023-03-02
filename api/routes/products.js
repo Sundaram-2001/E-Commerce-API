@@ -2,17 +2,47 @@ const express=require("express");
 const router=express.Router();
 const bodyParser=require("body-parser");   
 const Product = require('../models/product'); 
+// const multer=require("multer");
 const mongoose = require('mongoose');
+const multer = require("multer");
+// const upload=multer({dest:'uploads/'});
 
-router.get('/',(req,res,next)=>{
-    Product.find(function(result,err){
-        if(result){
-            const details=result.JSON(stringify);
-            res.send(details);
+const storage=multer.diskStorage({
+    destination:function(req,file,cb){
+        cb(null,'./uploads/');      //null defines some potential error
+    },
+    filename:function(req,file,cb){
+        cb(null,file.originalname);
+    }
+})
+
+const upload=multer({
+    storage:storage,
+    limits:{
+        fileSize:1024*1024*5
+    },
+    fileFilter:(req,file,cb)=>{
+        if(file.mimetype==="image/png" || file.mimetype==="image/jpeg" || file.mimetype==="image/gif" || file.mimetype==="jpg"){
+            cb(null,true);
         }
         else{
-            res.send(err);
+            cb(null,false);
+            return cb(new Error("Only PNG files Accepted!"))
         }
+    }
+})
+
+
+router.get('/',(req,res,next)=>{
+    Product.find()
+    .select('name price _id productImage')
+    .exec()
+    .then(details=>{
+        const result={
+            count:details.length,
+            items:details
+        };
+        res.status(200).json(result);
     })
 })
 
@@ -47,11 +77,13 @@ router.get('/:productName',(req,res,next)=>{
 })
 
 
-router.post('/',(req,res,next)=>{
+router.post('/',upload.single('productImage'),(req,res,next)=>{
+    console.log(req.file);
     const product=new Product({
         _id:new mongoose.Types.ObjectId(),
         name:req.body.name,
-        price:req.body.price
+        price:req.body.price,
+        productImage:req.file.path
     });
     product.save(err=>{
         res.status(200).json({
@@ -71,17 +103,5 @@ router.delete('/:productId',(req,res,next)=>{
     })
     
 
-// router.patch('/:productId',(req,res,next)=>{
-//     const Id=req.params.productId;
-//     Product.update(
-//         {name:req.body.newName},
-//         {price: req.body.newPrice},
-//         function(err){
-//           if (!err){
-//             res.send("Successfully updated the product");
-//           } else {
-//             res.send(err);
-//           }
-//         });
-// })
+
 module.exports=router;

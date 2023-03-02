@@ -1,52 +1,89 @@
 const express=require("express");
 const router=express.Router();
+const mongoose=require("mongoose");
+const Order=require("../models/orders");
+const Product=require("../models/product")
 
-router.get('/',(req,res,next)=>{
-    res.status(200).json({
-        message:"All the orders fetched successfully!"
+router.get("/",(req,res,next)=>{
+    // Order
+    Order.find()
+    .populate('product')
+    // .select('product quantity _id')
+    .exec()
+    .then( result=>{
+        res.status(200).json({
+            // Orders:result
+            count:result.length,
+            orders:result,
+            request:{
+                type:'GET',
+                URL:'localhost:150/orders/'
+            }
+        })
+    })
+    .catch(err=>{
+        res.status(500).json({
+            // Encountered Error:err;
+            Error:err
+        })
     })
 })
-
-router.get('/:orderId&:productId',(req,res,next)=>{
-    const order = req.params.orderId
-    const product = req.params.productId
-    res.status(200).json({
-        // const productNumber:Number(req.params.productId)
-        message:"Order for product-"+product+" "+"successfully placed with orderId-"+order
-
+router.get('/:orderId',(req,res,next)=>{
+    Order.findById(req.params.orderId)
+    .exec()
+    .then(result=>{
+        res.status(200).json({
+            orderDetails:{
+                order:result
+            }
+        })
+    })
+    .catch(err=>{
+        res.status(404).json({
+            "message":"No orders with id " + req.params.orderId+" " + "found, kindly check the orderId again!"
+        })
     })
 })
-
-router.post('/',(req,res,next)=>{
-    const order={
-        orderId:req.body.id,
-        orderDate:req.body.orderDate
-    }
-    res.status(200).json({
-        message:"Here,the orders you placed in last week!",
-        orderDetail:order
-    });
-});
-
-router.get('/:orderNumber',(req,res,next)=>{
-    const orderId=req.params.orderNumber;
-    res.status(200).json({
-        message:"Order Details of order number:"+" "+orderId,
-        orderId:req.params.orderNumber
+router.post("/",(req,res,next)=>{
+    Product.findById(req.body.ProductId)
+    .then(product=>{
+        const order=new Order({
+            _id:new mongoose.Types.ObjectId,
+            product:req.body.ProductId,
+            quantity:req.body.quantity
+        })
+        return order.save();
+    })
+    .then(result=>{
+        console.log(result);
+        res.status(200).json({
+            createdOrder:{
+                _id:result._id,
+                product:result.product,
+                quantity:result.quantity     
+                // Id:req.params.product 
+            }
+        });
+    })
+    
+    .catch(err=>{
+        res.status(500).json({
+            error:err
+        });
     })
 })
-
-
-router.patch('/:orderNumber',(req,res,next)=>{
-    res.status(200).json({
-        message:"Order Details of order number-"+" "+req.params.orderNumber+" "+"successfully updated!"
+router.delete("/:orderId",(req,res,next)=>{
+    Order.findById({_id:req.params.orderId},err=>{
+        if(!err){
+            res.status(200).json({
+                "message":"Order"+" "+req.params.orderId+" "+"has been deleted successfully!"
+            })
+        }
+        else{
+            res.status(404).json({
+                "message":"Order"+" "+req.params.orderId+" "+"not found,kindly enter a valid orderId!"
+            })
+        }
     })
 })
-
-router.delete('/:orderNumber',(req,res,next)=>{
-    res.status(200).json({
-        message:"Order number "+req.params.orderNumber+" "+"cancelled successfully!"
-    })
-})
-
 module.exports = router;
